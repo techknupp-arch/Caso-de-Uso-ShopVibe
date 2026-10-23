@@ -1,4 +1,7 @@
-﻿# ShopVibe
+﻿# Arquitetura
+![Arquitetura do Projeto](ShopVibe_Ecommerce.jpg)
+
+# ShopVibe
 
 Pipeline local de e-commerce com PostgreSQL, Debezium/Kafka, MinIO e Python.
 
