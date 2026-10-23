@@ -1,0 +1,17 @@
+{
+    "order_id": "ped-shopvibe-001",
+    "customer_id": "cliente-maria-123",
+    "items": [
+        {
+            "product_id": "prod-vestido-floral",
+            "quantity": 1,
+            "price": 199.9
+        }
+    ],
+    "total_amount": 199.9,
+    "payment_method": "credit_card",
+    "ip_address": "192.168.1.15",
+    "device_id": "android_samsung_s24",
+    "status": "APPROVED",
+    "timestamp": "2026-10-18T20:30:00.000000"
+}

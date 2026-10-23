@@ -1,0 +1,32 @@
+{
+  "name": "connector-minio-bronze",
+  "config": {
+    "connector.class": "io.confluent.connect.s3.S3SinkConnector",
+    "tasks.max": "1",
+    "topics": "shopvibe.shopvibe.customers,shopvibe.shopvibe.products,shopvibe.shopvibe.orders,shopvibe.orders.raw",
+    "s3.bucket.name": "bronze",
+    "s3.region": "us-east-1",
+    "aws.access.key.id": "",
+    "aws.secret.access.key": "",
+    "store.url": "http://minio:9000",
+    "flush.size": "1",
+    "s3.part.size": "5242880",
+    "s3.path.style.access.enabled": "true",
+    "s3.part.retries": "10",
+    "storage.class": "io.confluent.connect.s3.storage.S3Storage",
+    "format.class": "io.confluent.connect.s3.format.json.JsonFormat",
+    "behavior.on.null.values": "ignore",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "consumer.override.auto.offset.reset": "earliest",
+    "errors.tolerance": "none",
+    "transforms": "kafkaMetadata",
+    "transforms.kafkaMetadata.type": "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.kafkaMetadata.topic.field": "_kafka_topic",
+    "transforms.kafkaMetadata.partition.field": "_kafka_partition",
+    "transforms.kafkaMetadata.offset.field": "_kafka_offset",
+    "transforms.kafkaMetadata.timestamp.field": "_kafka_timestamp"
+  }
+}

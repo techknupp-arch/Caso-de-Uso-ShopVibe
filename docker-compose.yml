@@ -1,0 +1,357 @@
+services:
+  # 1. Banco Transacional (Origem dos Pedidos)
+  postgres:
+    image: cgr.dev/chainguard/postgres:latest
+    container_name: shopvibe_postgres
+    restart: unless-stopped
+    command: ["-c", "wal_level=logical", "-c", "max_replication_slots=10", "-c", "max_wal_senders=10"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: shopvibe_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - shopvibe_network
+
+  # 2. Zookeeper (Gerenciador do Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: shopvibe_zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    networks:
+      - shopvibe_network
+
+  # 3. Apache Kafka (Barramento de Eventos em Tempo Real)
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: shopvibe_kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_HEAP_OPTS: -Xms128m -Xmx512m
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # Preserve the replay buffer until an explicit retention policy is adopted.
+      KAFKA_LOG_RETENTION_MS: -1
+      KAFKA_LOG_RETENTION_BYTES: -1
+      KAFKA_LOG_CLEANUP_POLICY: delete
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - shopvibe_network
+
+  # 4. MinIO (Data Lake / Armazenamento Bronze, Silver e Gold)
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    container_name: shopvibe_minio
+    restart: unless-stopped
+    user: root
+    ports:
+      - "9000:9000"
+      - "9002:9001"
+    volumes:
+      - minio_storage:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server --console-address ":9001" /data
+    networks:
+      - shopvibe_network
+
+  # 5. Apache Airflow (Orquestrador de Pipelines)
+  airflow:
+    image: apache/airflow:2.7.1
+    container_name: shopvibe_airflow
+    restart: always
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__WORKERS=1
+      - AIRFLOW__SCHEDULER__PARSING_PROCESSES=1
+      - PYTHONPATH=/opt/airflow/project
+      - SHOPVIBE_PROJECT_ROOT=/opt/airflow/project
+      - AIRBYTE_URL=http://host.docker.internal:8001
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/shopvibe_db
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=admin
+      - _AIRFLOW_WWW_USER_PASSWORD=admin
+    command: standalone
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags:ro
+      - ./pipelines:/opt/airflow/project/pipelines:ro
+      - ./samples:/opt/airflow/project/samples:ro
+      - ./.runtime:/opt/airflow/project/.runtime:ro
+      - airflow_logs:/opt/airflow/logs
+    networks:
+      - shopvibe_network
+    
+  # APIs externas simuladas, coletadas pelos conectores declarativos do Airbyte.
+  mock-services:
+    image: python:3.12-alpine
+    command: ["python", "-u", "/app/mock_services.py"]
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./airbyte/mock_services.py:/app/mock_services.py:ro
+      - ./samples:/samples:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    networks:
+      - shopvibe_network
+
+  # O Airbyte e instalado pelo abctl; este servico apenas configura suas fontes/conexoes.
+  airbyte-init:
+    image: python:3.12-alpine
+    profiles: ["airbyte"]
+    working_dir: /project
+    command: ["python", "airbyte/bootstrap.py", "configure"]
+    environment:
+      PYTHONPATH: /project
+      AIRBYTE_URL: http://host.docker.internal:8001
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - ./airbyte:/project/airbyte:ro
+      - ./pipelines:/project/pipelines:ro
+      - ./samples:/project/samples:ro
+      - ./.runtime:/project/.runtime
+    networks:
+      - shopvibe_network
+
+  # API de checkout
+  api:
+    build: ./api
+    command:
+      - python
+      - -m
+      - uvicorn
+      - main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment: &shopvibe-python-env
+      KAFKA_BROKER: kafka:29092
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: shopvibe_db
+    depends_on:
+      postgres-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - shopvibe_network
+
+  consumer:
+    profiles: ["legacy"]
+    build: ./api
+    command: ["python", "-u", "consumer.py"]
+    restart: unless-stopped
+    environment: *shopvibe-python-env
+    depends_on:
+      connector-init:
+        condition: service_completed_successfully
+    networks:
+      - shopvibe_network
+
+  simulador:
+    build: ./api
+    command: ["python", "-u", "simulador.py"]
+    restart: "no"
+    environment: *shopvibe-python-env
+    depends_on:
+      api:
+        condition: service_healthy
+      connector-init:
+        condition: service_completed_successfully
+    networks:
+      - shopvibe_network
+
+ #6 PgAdmin (Interface de Administração do PostgreSQL)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: shopvibe_pgadmin
+    restart: always
+    depends_on:
+      postgres-init:
+        condition: service_completed_successfully
+    entrypoint: ["/venv/bin/python3", "/bootstrap/pgadmin.py"]
+    volumes:
+      - ./docker/bootstrap:/bootstrap:ro
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@shopvibe.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      PGADMIN_SERVER_JSON_FILE: /tmp/shopvibe-servers.json
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
+      PGPASS_FILE: /tmp/shopvibe.pgpass
+    networks:
+      - shopvibe_network
+
+  #7 Kafka Connector (Conector para o Kafka)
+  
+  kafka-connect:
+    build:
+      context: ./docker/kafka-connect
+    image: shopvibe-connect:s3-10.6.11
+    container_name: kafkaConect
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./conectores:/conectores
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:29092
+      - HEAP_OPTS=-Xms128m -Xmx512m
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=connect_configs
+      - OFFSET_STORAGE_TOPIC=connect_offsets
+      - STATUS_STORAGE_TOPIC=connect_statuses
+      - CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - STATUS_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
+      - CONNECT_CONNECTOR_CLIENT_CONFIG_OVERRIDE_POLICY=All
+    # Use the image's default entrypoint; /dev/tcp is not portable in sh.
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - postgres
+    networks:
+      - shopvibe_network
+
+
+  # Apply the same schema to existing volumes without resetting data.
+  postgres-init:
+    image: cgr.dev/chainguard/postgres:latest
+    entrypoint: ["/usr/bin/psql"]
+    command: ["-h", "postgres", "-U", "${POSTGRES_USER:-postgres}", "-d", "shopvibe_db", "-v", "ON_ERROR_STOP=1", "-f", "/bootstrap/01-schema.sql"]
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./docker/postgres:/bootstrap:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopvibe_network
+
+  connector-init:
+    image: python:3.12-alpine
+    command: ["python", "/bootstrap/register_connector.py"]
+    environment:
+      CONNECT_URL: http://kafka-connect:8083
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - ./docker/bootstrap:/bootstrap:ro
+      - ./conectores:/conectores:ro
+    depends_on:
+      postgres-init:
+        condition: service_completed_successfully
+      kafka-connect:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
+    networks:
+      - shopvibe_network
+
+  minio-init:
+    image: cgr.dev/chainguard/minio-client@sha256:72f9978d415ea8294d78051fb3aee2fd258d449237633f77f100b5367bb5225d
+    entrypoint: ["/usr/bin/bash", "/bootstrap/init-minio.sh"]
+    environment:
+      MC_CONFIG_DIR: /tmp/.mc
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - ./docker/bootstrap:/bootstrap:ro
+    depends_on:
+      - minio
+    networks:
+      - shopvibe_network
+
+  connector-watch:
+    image: python:3.12-alpine
+    command: ["python", "-u", "/bootstrap/watch_connectors.py"]
+    restart: unless-stopped
+    environment:
+      CONNECT_URL: http://kafka-connect:8083
+      MINIO_URL: http://minio:9000
+    volumes:
+      - ./docker/bootstrap:/bootstrap:ro
+    depends_on:
+      connector-init:
+        condition: service_completed_successfully
+    networks:
+      - shopvibe_network
+
+networks:
+  shopvibe_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_storage:
+  pgadmin_data:
+  kafka_data:
+  zookeeper_data:
+  zookeeper_log:
+  airflow_logs:

@@ -1,0 +1,39 @@
+{
+  "contract_version": 1,
+  "source_system": "payment_api",
+  "dataset": "payments",
+  "simulated": true,
+  "extracted_at": "2026-10-20T12:00:00Z",
+  "references": {},
+  "body": {
+    "payments": [
+      {
+        "id": "PAY-DEMO-001",
+        "order_id": "ORD-DEMO-001",
+        "status": "PAID",
+        "amount": "379.70",
+        "currency": "BRL",
+        "method": "credit_card",
+        "processed_at": "2026-10-19T08:01:00Z"
+      },
+      {
+        "id": "PAY-DEMO-002",
+        "order_id": "ORD-DEMO-002",
+        "status": "PAID",
+        "amount": "299.90",
+        "currency": "BRL",
+        "method": "pix",
+        "processed_at": "2026-10-19T08:02:00Z"
+      },
+      {
+        "id": "PAY-DEMO-003",
+        "order_id": "ORD-DEMO-003",
+        "status": "PENDING",
+        "amount": "89.90",
+        "currency": "BRL",
+        "method": "credit_card",
+        "processed_at": null
+      }
+    ]
+  }
+}

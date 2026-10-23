@@ -1,0 +1,69 @@
+{
+  "contract_version": 1,
+  "source_system": "bling",
+  "dataset": "inventory",
+  "simulated": true,
+  "extracted_at": "2026-10-20T12:00:00Z",
+  "references": {
+    "products": {
+      "1001": "SKU-DEMO-001",
+      "1002": "SKU-DEMO-002",
+      "1003": "SKU-DEMO-003"
+    }
+  },
+  "body": {
+    "data": [
+      {
+        "produto": {
+          "id": 1001
+        },
+        "depositos": [
+          {
+            "id": 1,
+            "saldoFisico": 20,
+            "saldoVirtual": 19
+          },
+          {
+            "id": 2,
+            "saldoFisico": 5,
+            "saldoVirtual": 5
+          }
+        ]
+      },
+      {
+        "produto": {
+          "id": 1002
+        },
+        "depositos": [
+          {
+            "id": 1,
+            "saldoFisico": 50,
+            "saldoVirtual": 49
+          },
+          {
+            "id": 2,
+            "saldoFisico": 5,
+            "saldoVirtual": 5
+          }
+        ]
+      },
+      {
+        "produto": {
+          "id": 1003
+        },
+        "depositos": [
+          {
+            "id": 1,
+            "saldoFisico": 10,
+            "saldoVirtual": 9
+          },
+          {
+            "id": 2,
+            "saldoFisico": 5,
+            "saldoVirtual": 5
+          }
+        ]
+      }
+    ]
+  }
+}

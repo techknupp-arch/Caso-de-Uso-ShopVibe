@@ -1,0 +1,28 @@
+{
+  "contract_version": 1,
+  "source_system": "clearsale",
+  "dataset": "fraud_assessments",
+  "simulated": true,
+  "extracted_at": "2026-10-20T12:00:00Z",
+  "references": {},
+  "body": {
+    "packageID": "PACKAGE-DEMO-001",
+    "orders": [
+      {
+        "code": "ORD-DEMO-001",
+        "status": "APA",
+        "score": 12.5
+      },
+      {
+        "code": "ORD-DEMO-002",
+        "status": "APA",
+        "score": 4.1
+      },
+      {
+        "code": "ORD-DEMO-003",
+        "status": "NVO",
+        "score": null
+      }
+    ]
+  }
+}

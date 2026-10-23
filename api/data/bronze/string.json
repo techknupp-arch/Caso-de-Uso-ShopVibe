@@ -1,0 +1,17 @@
+{
+    "order_id": "string",
+    "customer_id": "string",
+    "items": [
+        {
+            "product_id": "teste-02",
+            "quantity": 2,
+            "price": 0.0
+        }
+    ],
+    "total_amount": 0.0,
+    "payment_method": "string",
+    "ip_address": "127.0.0.1",
+    "device_id": "web_browser",
+    "status": "APPROVED",
+    "timestamp": "2026-10-19T03:19:10.166547"
+}

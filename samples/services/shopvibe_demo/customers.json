@@ -1,0 +1,20 @@
+{
+  "contract_version": 1,
+  "source_system": "shopvibe_demo",
+  "dataset": "customers",
+  "simulated": true,
+  "extracted_at": "2026-10-20T12:00:00Z",
+  "references": {},
+  "body": [
+    {
+      "id": "CUS-DEMO-001",
+      "name": "Cliente demonstracao A",
+      "email": "cliente-a@example.invalid"
+    },
+    {
+      "id": "CUS-DEMO-002",
+      "name": "Cliente demonstracao B",
+      "email": "cliente-b@example.invalid"
+    }
+  ]
+}

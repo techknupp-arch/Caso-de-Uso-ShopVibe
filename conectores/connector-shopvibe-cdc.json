@@ -1,0 +1,17 @@
+{
+  "name": "connector-shopvibe-cdc",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "",
+    "database.password": "",
+    "database.dbname": "shopvibe_db",
+    "plugin.name": "pgoutput",
+    "topic.prefix": "shopvibe",
+    "slot.name": "debezium_shopvibe",
+    "schema.include.list": "shopvibe",
+    "table.include.list": "shopvibe.customers,shopvibe.products,shopvibe.orders"
+  }
+}

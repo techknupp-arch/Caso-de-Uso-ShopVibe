@@ -1,0 +1,28 @@
+{
+  "server": {
+    "env_vars": {"JAVA_TOOL_OPTIONS": "-Xms64m -Xmx512m"},
+    "livenessProbe": {"initialDelaySeconds": 120, "periodSeconds": 10, "timeoutSeconds": 15, "failureThreshold": 8},
+    "readinessProbe": {"timeoutSeconds": 15, "failureThreshold": 6}
+  },
+  "worker": {
+    "env_vars": {"JAVA_TOOL_OPTIONS": "-Xms64m -Xmx384m"},
+    "livenessProbe": {"initialDelaySeconds": 120, "periodSeconds": 10, "timeoutSeconds": 15, "failureThreshold": 8},
+    "readinessProbe": {"timeoutSeconds": 15, "failureThreshold": 6}
+  },
+  "workload-launcher": {
+    "env_vars": {"JAVA_TOOL_OPTIONS": "-Xms64m -Xmx384m"},
+    "livenessProbe": {"initialDelaySeconds": 120, "periodSeconds": 10, "timeoutSeconds": 15, "failureThreshold": 8},
+    "readinessProbe": {"timeoutSeconds": 15, "failureThreshold": 6}
+  },
+  "workload-api-server": {
+    "env_vars": {"JAVA_TOOL_OPTIONS": "-Xms64m -Xmx384m"},
+    "livenessProbe": {"initialDelaySeconds": 120, "periodSeconds": 10, "timeoutSeconds": 15, "failureThreshold": 8},
+    "readinessProbe": {"timeoutSeconds": 15, "failureThreshold": 6}
+  },
+  "cron": {"env_vars": {"JAVA_TOOL_OPTIONS": "-Xms64m -Xmx256m"}},
+  "connector-builder-server": {
+    "enabled": true,
+    "livenessProbe": {"initialDelaySeconds": 120, "periodSeconds": 10, "timeoutSeconds": 15, "failureThreshold": 8},
+    "readinessProbe": {"timeoutSeconds": 15, "failureThreshold": 6}
+  }
+}

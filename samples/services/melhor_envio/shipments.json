@@ -1,0 +1,39 @@
+{
+  "contract_version": 1,
+  "source_system": "melhor_envio",
+  "dataset": "shipments",
+  "simulated": true,
+  "extracted_at": "2026-10-20T12:00:00Z",
+  "references": {
+    "orders": {
+      "SHIP-DEMO-001": "ORD-DEMO-001",
+      "SHIP-DEMO-002": "ORD-DEMO-002"
+    }
+  },
+  "body": {
+    "SHIP-DEMO-001": {
+      "id": "SHIP-DEMO-001",
+      "protocol": "PROTO-DEMO-001",
+      "status": "posted",
+      "tracking": "TRACK-DEMO-001",
+      "company": {
+        "id": 1,
+        "name": "Transportadora ficticia"
+      },
+      "posted_at": "2026-10-20T01:00:00Z",
+      "delivered_at": null
+    },
+    "SHIP-DEMO-002": {
+      "id": "SHIP-DEMO-002",
+      "protocol": "PROTO-DEMO-002",
+      "status": "delivered",
+      "tracking": "TRACK-DEMO-002",
+      "company": {
+        "id": 1,
+        "name": "Transportadora ficticia"
+      },
+      "posted_at": "2026-10-19T12:00:00Z",
+      "delivered_at": "2026-10-19T18:00:00Z"
+    }
+  }
+}

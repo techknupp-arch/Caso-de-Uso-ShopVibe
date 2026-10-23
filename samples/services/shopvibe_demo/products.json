@@ -1,0 +1,28 @@
+{
+  "contract_version": 1,
+  "source_system": "shopvibe_demo",
+  "dataset": "products",
+  "simulated": true,
+  "extracted_at": "2026-10-20T12:00:00Z",
+  "references": {},
+  "body": [
+    {
+      "id": "SKU-DEMO-001",
+      "name": "Teclado demonstracao",
+      "price": "199.90",
+      "stock": 20
+    },
+    {
+      "id": "SKU-DEMO-002",
+      "name": "Mouse demonstracao",
+      "price": "89.90",
+      "stock": 50
+    },
+    {
+      "id": "SKU-DEMO-003",
+      "name": "Headset demonstracao",
+      "price": "299.90",
+      "stock": 10
+    }
+  ]
+}

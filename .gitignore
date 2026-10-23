@@ -6,3 +6,6 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+.local-backup/
+.tools/
+.runtime/
