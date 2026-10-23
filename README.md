@@ -1,5 +1,6 @@
 ﻿# Arquitetura
-![Arquitetura do Projeto](ShopVibe_Ecommerce.jpg)
+![Arquitetura do Projeto](ShopVibe_Ecommerce.png)
+
 
 # ShopVibe
 
